@@ -1,0 +1,115 @@
+#These imports the necessary files like openCV and numpy for our project
+
+import cv2
+import numpy
+
+
+
+
+# This function is blank function because in creating a trackbar,We need to pass a function.We don't need this function to do anything,so for the sake of declaring it,We are declaring this blank function
+# This is a function definition  on for the callback function hello(). It takes an argument x, but in this code, it doesn't perform any meaningful operation. It's used as a placeholder function for the trackbars.
+
+def hello(x):
+    # only for referece
+    print("")
+
+
+
+# We are initialising the camera here with width = 1080 and height = 720
+cap = cv2.VideoCapture(0)
+cap.set(3, 1080)#width
+cap.set(4, 720)#height
+
+
+#Here we create a window on which our multiple trackbars will set on
+bars = cv2.namedWindow("bars")
+
+#Now we are actually creating the trackbars in the window named "bars"
+
+cv2.createTrackbar("upper_hue", "bars", 138, 180, hello)
+cv2.createTrackbar("upper_saturation", "bars", 255, 255, hello)
+cv2.createTrackbar("upper_value", "bars", 255, 255, hello)
+cv2.createTrackbar("lower_hue", "bars", 109, 180, hello)
+cv2.createTrackbar("lower_saturation", "bars", 55, 255, hello)
+cv2.createTrackbar("lower_value", "bars", 54, 255, hello)
+
+
+# Capturing the initial frame for creation of background
+#This will click a snapshot of initial frame with which it have to merge when it detected the colour it has to removed
+while (True):
+    cv2.waitKey(1000)
+    ret, init_frame = cap.read()
+    # check if the frame is returned then brake
+    if (ret):
+        break
+
+# Now we will capture the continuous frames in which we have to remove that particular colour
+while (True):
+
+    #In this ret and frame,Aour present frame is present
+    ret, frame = cap.read()
+
+    #Now that frame si being converted into HSV from BGR
+    inspect = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+
+    # Now we will collect the data of our color which we want to remove from our set trackbars.
+    upper_hue = cv2.getTrackbarPos("upper_hue", "bars")
+    upper_saturation = cv2.getTrackbarPos("upper_saturation", "bars")
+    upper_value = cv2.getTrackbarPos("upper_value", "bars")
+    lower_value = cv2.getTrackbarPos("lower_value", "bars")
+    lower_hue = cv2.getTrackbarPos("lower_hue", "bars")
+    lower_saturation = cv2.getTrackbarPos("lower_saturation", "bars")
+
+    # Kernel to be used for dilation
+    #Dilation adds pixels to the boundaries of objects in an image. If we have a hole in our cloak,or the camera did not receive its actual color and the hole comes, then dilation adds pixels to boundaries and fill the holes
+    #here we define a 3X3 matrix containing 1 to add dilation.
+
+    kernel = numpy.ones((3, 3), numpy.uint8)
+
+    #Here we will now merge the lower hsv into an array and upper hsv into another array.
+
+    upper_hsv = numpy.array([upper_hue, upper_saturation, upper_value])
+    lower_hsv = numpy.array([lower_hue, lower_saturation, lower_value])
+
+    #now here we will do masking.Like We fill find that color in frame which matches the hsv range from our trackbars
+    mask = cv2.inRange(inspect, lower_hsv, upper_hsv)
+
+    #Now we get that color in our range which we have to cut  in mask and we will now blurr it so that it does not remain sharp..
+    mask = cv2.medianBlur(mask, 3) 
+
+    #now we will convert this mask into black colour
+    mask_inv = 255 - maskcolor
+
+    #Now we will dilate this image so that no holes remains in this
+    mask = cv2.dilate(mask, kernel, 12)
+
+    # The mixing of frames in a combination to achieve the required frame
+    b = frame[:, :, 0]
+    g = frame[:, :, 1]
+    r = frame[:, :, 2]
+    b = cv2.bitwise_and(mask_inv, b)
+    g = cv2.bitwise_and(mask_inv, g)
+    r = cv2.bitwise_and(mask_inv, r)
+    frame_inv = cv2.merge((b, g, r))
+
+    b = init_frame[:, :, 0]
+    g = init_frame[:, :, 1]
+    r = init_frame[:, :, 2]
+    b = cv2.bitwise_and(b, mask)
+    g = cv2.bitwise_and(g, mask)
+    r = cv2.bitwise_and(r, mask)
+    blanket_area = cv2.merge((b, g, r))
+
+    final = cv2.bitwise_or(frame_inv, blanket_area)
+
+    cv2.imshow("Harry's Cloak", final)
+
+
+    if (cv2.waitKey(3) == ord('q')):
+        break;
+
+cv2.destroyAllWindows()
+cap.release()
+
+
